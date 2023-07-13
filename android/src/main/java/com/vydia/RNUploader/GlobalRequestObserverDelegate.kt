@@ -7,6 +7,8 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter
 import net.gotev.uploadservice.data.UploadInfo
+import net.gotev.uploadservice.exceptions.UploadError
+import net.gotev.uploadservice.exceptions.UserCancelledUploadException
 import net.gotev.uploadservice.network.ServerResponse
 import net.gotev.uploadservice.observer.request.RequestObserverDelegate
 
@@ -24,6 +26,20 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
   override fun onError(context: Context, uploadInfo: UploadInfo, exception: Throwable) {
     val params = Arguments.createMap()
     params.putString("id", uploadInfo.uploadId)
+
+    when (exception) {
+      is UserCancelledUploadException -> {
+        Log.e(TAG, "Error, user cancelled upload: $uploadInfo")
+      }
+      is UploadError -> {
+        Log.e(TAG, "Error, upload error: ${exception.serverResponse}")
+      }
+      else -> {
+        Log.e(TAG, "Error: $uploadInfo", exception)
+      }
+    }
+
+
 
     Log.d(TAG, "onError: ${exception.serverResponse} | ${exception.message} | ${uploadInfo.toString()} | ${context.toString()} | ${uploadInfo.req}", exception)
 
