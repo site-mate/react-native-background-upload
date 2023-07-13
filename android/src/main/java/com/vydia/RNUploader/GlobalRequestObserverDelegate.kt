@@ -25,6 +25,10 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
     val params = Arguments.createMap()
     params.putString("id", uploadInfo.uploadId)
 
+    // TODO
+
+    Log.d(TAG, "onError: ${exception.message} | ${uploadInfo.toString()}", exception)
+
     // Make sure we do not try to call getMessage() on a null object
     if (exception != null) {
       params.putString("error", exception.message)
