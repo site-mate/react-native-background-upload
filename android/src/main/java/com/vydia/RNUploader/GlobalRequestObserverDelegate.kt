@@ -41,7 +41,7 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
 
 
 
-    Log.d(TAG, "onError: ${exception.serverResponse} | ${exception.message} | ${uploadInfo.toString()} | ${context.toString()} | ${uploadInfo.req}", exception)
+    Log.d(TAG, "onError: ${exception.message} | ${uploadInfo.toString()} | ${context.toString()}", exception)
 
     // Make sure we do not try to call getMessage() on a null object
     if (exception != null) {
