@@ -24,32 +24,21 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
   }
 
   override fun onError(context: Context, uploadInfo: UploadInfo, exception: Throwable) {
+    var errorMessage = exception.message
     val params = Arguments.createMap()
     params.putString("id", uploadInfo.uploadId)
 
     when (exception) {
       is UserCancelledUploadException -> {
-        Log.e(TAG, "Error, user cancelled upload: $uploadInfo")
+        errorMessage = "User cancelled upload"
       }
       is UploadError -> {
-        Log.e(TAG, "Error, upload error: ${exception.serverResponse}")
-      }
-      else -> {
-        Log.e(TAG, "Error: $uploadInfo", exception)
+        errorMessage = "responseCode=${exception.serverResponse.code} responseBody=${exception.serverResponse.bodyString}"
+        Log.e(TAG, "Error, upload error: ${exception.serverResponse.code} ${exception.serverResponse.bodyString}")
       }
     }
 
-
-
-    Log.d(TAG, "onError: ${exception.message} | ${uploadInfo.toString()} | ${context.toString()}", exception)
-
-    // Make sure we do not try to call getMessage() on a null object
-    if (exception != null) {
-      params.putString("error", exception.message)
-    } else {
-      params.putString("error", "Unknown exception")
-    }
-
+    params.putString("error", errorMessage)
     sendEvent("error", params, context)
   }
 
