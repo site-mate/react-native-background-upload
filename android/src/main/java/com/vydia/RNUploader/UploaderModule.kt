@@ -264,8 +264,6 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       promise.resolve(uploadId)
     } catch (exc: java.lang.Exception) {
       exc.printStackTrace()
-
-      Log.e(TAG, "This is happening!")
       Log.e(TAG, exc.message, exc)
       promise.reject(exc)
     }
