@@ -16,9 +16,9 @@ import net.gotev.uploadservice.data.UploadNotificationConfig
 import net.gotev.uploadservice.data.UploadNotificationStatusConfig
 import net.gotev.uploadservice.observer.request.GlobalRequestObserver
 import net.gotev.uploadservice.okhttp.OkHttpStack
+import net.gotev.uploadservice.placeholders.Placeholder
 import net.gotev.uploadservice.protocols.binary.BinaryUploadRequest
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadRequest
-import net.gotev.uploadservice.placeholders.Placeholder
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
