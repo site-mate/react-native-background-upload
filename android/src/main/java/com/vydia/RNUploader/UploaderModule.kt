@@ -18,6 +18,7 @@ import net.gotev.uploadservice.observer.request.GlobalRequestObserver
 import net.gotev.uploadservice.okhttp.OkHttpStack
 import net.gotev.uploadservice.protocols.binary.BinaryUploadRequest
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadRequest
+import net.gotev.uploadservice.placeholders.Placeholder
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -204,24 +205,26 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       request.setMethod(method!!)
               .setMaxRetries(maxRetries)
       if (notification.getBoolean("enabled")) {
+        // for placeholder guide, reference this example:
+        // https://github.com/gotev/android-upload-service/blob/f2254d47b33a3891e33c600f39fef7abfa9ffdf9/uploadservice/src/main/java/net/gotev/uploadservice/UploadServiceConfig.kt#L131-L157
         val notificationConfig = UploadNotificationConfig(
                 notificationChannelId = notificationChannelID,
                 isRingToneEnabled = notification.hasKey("enableRingTone") && notification.getBoolean("enableRingTone"),
                 progress = UploadNotificationStatusConfig(
-                        title = if (notification.hasKey("onProgressTitle")) notification.getString("onProgressTitle")!! else "",
-                        message = if (notification.hasKey("onProgressMessage")) notification.getString("onProgressMessage")!! else ""
+                        title = if (notification.hasKey("onProgressTitle")) notification.getString("onProgressTitle")!! else "Upload in progress",
+                        message = if (notification.hasKey("onProgressMessage")) notification.getString("onProgressMessage")!! else "Uploading at ${Placeholder.UploadRate} (${Placeholder.Progress})"
                 ),
                 success = UploadNotificationStatusConfig(
-                        title = if (notification.hasKey("onCompleteTitle")) notification.getString("onCompleteTitle")!! else "",
-                        message = if (notification.hasKey("onCompleteMessage")) notification.getString("onCompleteMessage")!! else "",
+                        title = if (notification.hasKey("onCompleteTitle")) notification.getString("onCompleteTitle")!! else "Upload completed",
+                        message = if (notification.hasKey("onCompleteMessage")) notification.getString("onCompleteMessage")!! else "Upload completed successfully in ${Placeholder.ElapsedTime}",
                         autoClear = notification.hasKey("autoClear") && notification.getBoolean("autoClear")
                 ),
                 error = UploadNotificationStatusConfig(
-                        title = if (notification.hasKey("onErrorTitle")) notification.getString("onErrorTitle")!! else "",
-                        message = if (notification.hasKey("onErrorMessage")) notification.getString("onErrorMessage")!! else ""
+                        title = if (notification.hasKey("onErrorTitle")) notification.getString("onErrorTitle")!! else "Upload failed",
+                        message = if (notification.hasKey("onErrorMessage")) notification.getString("onErrorMessage")!! else "Error during upload"
                 ),
                 cancelled = UploadNotificationStatusConfig(
-                        title = if (notification.hasKey("onCancelledTitle")) notification.getString("onCancelledTitle")!! else "",
+                        title = if (notification.hasKey("onCancelledTitle")) notification.getString("onCancelledTitle")!! else "Upload cancelled",
                         message = if (notification.hasKey("onCancelledMessage")) notification.getString("onCancelledMessage")!! else ""
                 )
         )
