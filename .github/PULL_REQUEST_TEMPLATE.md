@@ -1,37 +1,37 @@
-<!-- Thanks for submitting a pull request! We appreciate you spending the time to work on these changes. Please follow the template so that the reviewers can easily understand what the code changes affect -->
+## Objective \*
 
-# Summary
+> _Briefly describe the purpose of this PR._
 
-<!--
-Explain the **motivation** for making this change: here are some points to help you:
+## Details and Context \*
 
-* What issues does the pull request solve? Please tag them so that they will get automatically closed once the PR is merged
-* What is the feature? (if applicable)
-* How did you implement the solution?
-* What areas of the library does it impact?
--->
+> _List the major changes made in this PR, and add any other context or screenshots about the changes._
 
-## Test Plan
+> _Insert ticket link here._
 
-<!-- Demonstrate the code is solid. Example: The exact commands you ran and their output, screenshots / videos if the pull request changes UI. -->
+> _Insert Loom video link here if available._
 
-### What's required for testing (prerequisites)?
+## Pre-Submission Checklist \*
 
-### What are the steps to reproduce (after prerequisites)?
+- [ ] I have reviewed all the changes one final time before opening this PR.
 
-## Compatibility
+## Tests
 
-| OS      | Implemented |
-| ------- | :---------: |
-| iOS     |    ✅❌     |
-| Android |    ✅❌     |
+- [ ] I have added automated tests for all new code introduced in this PR.
+- [ ] I have not added automated tests, because... (explain below)
 
-## Checklist
+### Risks and uncertainty (optional)
 
-<!-- Check completed item, when applicable, via: [X] -->
+- [ ] This PR doesn't introduce any new risks or uncertainties.
+- [ ] This PR introduces new risks or uncertainties, because... (explain below)
 
-- [ ] I have tested this on a device and a simulator
-- [ ] I added the documentation in `README.md`
-- [ ] I updated the typed files (TS and Flow)
-- [ ] I've added Detox End-to-End Test(s)
-- [ ] I've created a snack to demonstrate the changes: LINK HERE
+## Additional Information
+
+- Feedback Ladder Reminder
+
+  - Mountain: Blocker & immediate action needed.
+  - Boulder: Blocker & requires action
+  - Pebble: Non-blocking, but requires future action (in either this or a future PR)
+  - Sand: Non-blocking, but is generally best practice
+  - Dust: Non-blocking comment
+
+- [**Pull Request Standards**](https://sitemate.atlassian.net/wiki/spaces/ENG/pages/143458410/Branching+Pull+Requests+Code+Reviews#%E2%9C%A8--Pull-Requests)
