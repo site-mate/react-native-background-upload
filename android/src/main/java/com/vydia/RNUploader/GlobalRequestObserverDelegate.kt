@@ -39,7 +39,7 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
     }
 
     params.putString("error", errorMessage)
-    sendEvent("error", params, context)
+    sendEvent("error", params)
   }
 
   override fun onProgress(context: Context, uploadInfo: UploadInfo) {
@@ -47,7 +47,7 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
     params.putString("id", uploadInfo.uploadId)
     params.putInt("progress", uploadInfo.progressPercent) //0-100
 
-    sendEvent("progress", params, context)
+    sendEvent("progress", params)
   }
 
   override fun onSuccess(context: Context, uploadInfo: UploadInfo, serverResponse: ServerResponse) {
@@ -60,13 +60,13 @@ class GlobalRequestObserverDelegate(reactContext: ReactApplicationContext) : Req
     params.putInt("responseCode", serverResponse.code)
     params.putString("responseBody", serverResponse.bodyString)
     params.putMap("responseHeaders", headers)
-    sendEvent("completed", params, context)
+    sendEvent("completed", params)
   }
 
   /**
    * Sends an event to the JS module.
    */
-  private fun sendEvent(eventName: String, params: WritableMap?, context: Context) {
+  private fun sendEvent(eventName: String, params: WritableMap?) {
     reactContext?.getJSModule(RCTDeviceEventEmitter::class.java)?.emit("RNFileUploader-$eventName", params)
             ?: Log.e(TAG, "sendEvent() failed due reactContext == null!")
   }

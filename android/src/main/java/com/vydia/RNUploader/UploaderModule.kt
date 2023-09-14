@@ -7,8 +7,9 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import android.webkit.MimeTypeMap
-import com.facebook.react.BuildConfig
-import com.facebook.react.bridge.*
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
 import net.gotev.uploadservice.UploadService
 import net.gotev.uploadservice.UploadServiceConfig.httpStack
 import net.gotev.uploadservice.UploadServiceConfig.initialize
@@ -28,9 +29,8 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
   private var notificationChannelID = "BackgroundUploadChannel"
   private var isGlobalRequestObserver = false
 
-  override fun getName(): String {
-    return "RNFileUploader"
-  }
+  override fun getName() = "RNFileUploader"
+
 
   /*
   Gets file information for the path specified.  Example valid path is: /storage/extSdCard/DCIM/Camera/20161116_074726.mp4
@@ -321,11 +321,13 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
     }
   }
 
+  @Suppress("UNUSED_PARAMETER")
   @ReactMethod
   fun addListener(type: String?) {
       // Keep: Required for RN built in Event Emitter Calls.
   }
 
+  @Suppress("UNUSED_PARAMETER")
   @ReactMethod
   fun removeListeners(type: Int?) {
       // Keep: Required for RN built in Event Emitter Calls.

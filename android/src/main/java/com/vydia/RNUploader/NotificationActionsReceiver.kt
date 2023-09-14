@@ -30,13 +30,13 @@ class NotificationActionsReceiver : BroadcastReceiver() {
     UploadService.stopUpload(uploadId)
     val params = Arguments.createMap()
     params.putString("id", uploadId)
-    sendEvent("cancelled", params, context)
+    sendEvent("cancelled", params)
   }
 
   /**
    * Sends an event to the JS module.
    */
-  private fun sendEvent(eventName: String, params: WritableMap?, context: Context) {
+  private fun sendEvent(eventName: String, params: WritableMap?) {
     reactContext?.getJSModule(RCTDeviceEventEmitter::class.java)?.emit("RNFileUploader-$eventName", params)
             ?: Log.e(TAG, "sendEvent() failed due reactContext == null!")
   }
