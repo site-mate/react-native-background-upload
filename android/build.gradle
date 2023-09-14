@@ -34,6 +34,8 @@ def safeExtGet(prop, fallback) {
 }
 
 android {
+     namespace "com.vydia.RNUploader"
+
     compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
     buildToolsVersion safeExtGet('buildToolsVersion', DEFAULT_BUILD_TOOLS_VERSION)
 
