@@ -320,14 +320,12 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       manager.createNotificationChannel(channel)
     }
   }
-
-  @Suppress("UNUSED_PARAMETER")
+  
   @ReactMethod
   fun addListener(type: String?) {
       // Keep: Required for RN built in Event Emitter Calls.
   }
 
-  @Suppress("UNUSED_PARAMETER")
   @ReactMethod
   fun removeListeners(type: Int?) {
       // Keep: Required for RN built in Event Emitter Calls.
