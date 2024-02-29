@@ -1,7 +1,7 @@
 /**
  * Handles HTTP background file uploads from an iOS or Android device.
  */
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
+import { Platform, NativeModules, NativeEventEmitter, DeviceEventEmitter } from 'react-native';
 import type { EventSubscription } from 'react-native';
 
 export type UploadEvent =
@@ -123,11 +123,18 @@ export const addListener = (
   uploadId: string,
   listener: Function,
 ): EventSubscription => {
-  return eventEmitter.addListener(eventPrefix + eventType, data => {
+  if (Platform.OS === 'ios') {
+    return eventEmitter.addListener(eventPrefix + eventType, (data) => {
+      if (!uploadId || !data || !data.id || data.id === uploadId) {
+        listener(data)
+      }
+    })
+  }
+  return DeviceEventEmitter.addListener(eventPrefix + eventType, data => {
     if (!uploadId || !data || !data.id || data.id === uploadId) {
-      listener(data);
+      listener(data)
     }
-  });
+  })
 };
 
 // call this to let the OS it can suspend again
