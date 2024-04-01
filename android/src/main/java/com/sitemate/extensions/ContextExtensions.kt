@@ -1,8 +1,8 @@
 package com.sitemate.uploader
 
 import android.content.Context
-import com.sitemate.uploader.work.TaskCompletionNotifier
-import com.sitemate.uploader.work.UploadManager
+import com.sitemate.work.TaskCompletionNotifier
+import com.sitemate.work.UploadManager
 import net.gotev.uploadservice.UploadTask
 import net.gotev.uploadservice.data.UploadNotificationConfig
 import net.gotev.uploadservice.data.UploadTaskParameters

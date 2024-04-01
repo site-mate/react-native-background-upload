@@ -3,10 +3,10 @@ package com.sitemate.uploader
 import android.content.Context
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import com.sitemate.uploader.extensions.PARAM_KEY_NOTIF_CONFIG
-import com.sitemate.uploader.extensions.PARAM_KEY_TASK_PARAMS
-import com.sitemate.uploader.extensions.toUploadNotificationConfig
-import com.sitemate.uploader.extensions.toUploadTaskParameters
+import com.sitemate.PARAM_KEY_NOTIF_CONFIG
+import com.sitemate.PARAM_KEY_TASK_PARAMS
+import com.sitemate.toUploadNotificationConfig
+import com.sitemate.toUploadTaskParameters
 
 class UploadWorker(val context: Context, params: WorkerParameters): Worker(context, params) {
 

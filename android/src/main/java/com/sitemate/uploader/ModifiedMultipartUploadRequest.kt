@@ -1,9 +1,9 @@
 package com.sitemate.uploader
 
 import android.content.Context
-import com.sitemate.uploader.extensions.contentType
-import com.sitemate.uploader.extensions.parameterName
-import com.sitemate.uploader.extensions.remoteFileName
+import com.sitemate.extensions.contentType
+import com.sitemate.extensions.parameterName
+import com.sitemate.extensions.remoteFileName
 import net.gotev.uploadservice.UploadTask
 import net.gotev.uploadservice.data.UploadFile
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadTask

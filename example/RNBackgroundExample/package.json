@@ -20,7 +20,7 @@
   "dependencies": {
     "react": "18.2.0",
     "react-native": "0.71.13",
-    "react-native-background-upload": "github:site-mate/react-native-background-upload#eb4fa54d1cee009d19144c256e5c9768979dd4e5",
+    "react-native-background-upload": "github:site-mate/react-native-background-upload#af7d46af3a64aa8ee853cdfe304e873779a3a2c0",
     "react-native-fs": "^2.20.0",
     "react-native-image-crop-picker": "^0.40.3"
   },

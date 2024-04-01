@@ -3,10 +3,10 @@ package com.sitemate.uploader
 import android.content.Context
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import com.sitemate.uploader.extensions.setData
-import com.sitemate.uploader.extensions.shouldLimitNetwork
-import com.sitemate.uploader.work.UploadManager
-import com.sitemate.uploader.work.UploadWorker
+import com.sitemate.extensions.setData
+import com.sitemate.extensions.shouldLimitNetwork
+import com.sitemate.work.UploadManager
+import com.sitemate.work.UploadWorker
 import net.gotev.uploadservice.HttpUploadRequest
 import net.gotev.uploadservice.data.UploadTaskParameters
 import java.util.*
