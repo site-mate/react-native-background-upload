@@ -9,8 +9,8 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.appfolio.work.UploadManager
-import com.appfolio.work.UploadWorker
+import com.vydia.RNUploader.work.UploadManager
+import com.vydia.RNUploader.work.UploadWorker
 import com.facebook.react.BuildConfig
 import com.facebook.react.bridge.*
 import net.gotev.uploadservice.UploadService

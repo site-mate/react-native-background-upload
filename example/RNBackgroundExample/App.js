@@ -7,8 +7,8 @@
  */
 
 import React, {useState} from 'react';
+
 import {
-  Alert,
   SafeAreaView,
   StyleSheet,
   ScrollView,
@@ -18,13 +18,14 @@ import {
   Button,
   Platform,
   TouchableOpacity,
+  NativeModules,
 } from 'react-native';
 
 import {Header, Colors} from 'react-native/Libraries/NewAppScreen';
 
 import Upload from 'react-native-background-upload';
 
-import ImagePicker from 'react-native-image-picker';
+import ImagePicker from 'react-native-image-crop-picker';
 
 import RNFS from 'react-native-fs';
 
@@ -46,8 +47,9 @@ const commonOptions = {
 };
 
 RNFS.writeFile(path, '');
+console.log(NativeModules.RNFileUploader);
 
-const App: () => React$Node = () => {
+const App = () => {
   const [delay10Completed, set10SecDelayCompleted] = useState(false);
   const [delay5Completed, set5SecDelayCompleted] = useState(false);
 
@@ -55,87 +57,64 @@ const App: () => React$Node = () => {
   const [uploadId, setUploadId] = useState(null);
   const [progress, setProgress] = useState(null);
 
-  const onPressUpload = options => {
+  const onPressUpload = async options => {
     if (isImagePickerShowing) {
       return;
     }
 
     setIsImagePickerShowing(true);
 
-    const imagePickerOptions = {
-      takePhotoButtonTitle: null,
-      title: 'Upload Media',
-      chooseFromLibraryButtonTitle: 'Choose From Library',
-    };
+    const [galleryMedia] = await ImagePicker.openPicker({
+      multiple: true,
+      includeExif: true,
+      maxFiles: 1,
+      writeTempFile: false, // note: this would be handy, but is iOS only :-(
+    });
 
-    ImagePicker.showImagePicker(imagePickerOptions, response => {
-      let didChooseVideo = true;
+    const finalPath = galleryMedia.path || galleryMedia.uri;
 
-      console.log('ImagePicker response: ', response);
-      const {customButton, didCancel, error, path, uri} = response;
+    console.log('media!', galleryMedia);
+    console.log('media path', finalPath);
 
-      if (didCancel) {
-        didChooseVideo = false;
-      }
+    setIsImagePickerShowing(false);
 
-      if (error) {
-        console.warn('ImagePicker error:', response);
-        didChooseVideo = false;
-      }
+    Upload.getFileInfo(finalPath).then(metadata => {
+      const uploadOpts = Object.assign(
+        {
+          path: finalPath,
+          method: 'POST',
+          headers: {
+            'content-type': metadata.mimeType, // server requires a content-type header
+          },
+        },
+        options,
+      );
 
-      // TODO: Should this happen higher?
-      setIsImagePickerShowing(false);
-
-      if (!didChooseVideo) {
-        return;
-      }
-
-      let finalPath = Platform.OS === 'android' ? path : uri;
-
-      if (finalPath) {
-        // Video is stored locally on the device
-        Upload.getFileInfo(finalPath).then(metadata => {
-          const uploadOpts = Object.assign(
-            {
-              path: finalPath,
-              method: 'POST',
-              headers: {
-                'content-type': metadata.mimeType, // server requires a content-type header
-              },
-            },
-            options,
+      Upload.startUpload(uploadOpts)
+        .then(uploadId => {
+          console.log(
+            `Upload started with options: ${JSON.stringify(uploadOpts)}`,
           );
-
-          Upload.startUpload(uploadOpts)
-            .then(uploadId => {
-              console.log(
-                `Upload started with options: ${JSON.stringify(uploadOpts)}`,
-              );
-              setUploadId(uploadId);
-              setProgress(0);
-              Upload.addListener('progress', uploadId, data => {
-                if (data.progress % 5 === 0) {
-                  setProgress(+data.progress);
-                }
-                console.log(`Progress: ${data.progress}%`);
-              });
-              Upload.addListener('error', uploadId, data => {
-                console.log(`Error: ${data.error}%`);
-              });
-              Upload.addListener('completed', uploadId, data => {
-                console.log('Completed!');
-              });
-            })
-            .catch(function(err) {
-              setUploadId(null);
-              setProgress(null);
-              console.log('Upload error!', err);
-            });
+          setUploadId(uploadId);
+          setProgress(0);
+          Upload.addListener('progress', uploadId, data => {
+            if (data.progress % 5 === 0) {
+              setProgress(+data.progress);
+            }
+            console.log(`Progress: ${data.progress}%`);
+          });
+          Upload.addListener('error', uploadId, data => {
+            console.log(`Error: ${data.error}%`);
+          });
+          Upload.addListener('completed', uploadId, data => {
+            console.log('Completed!');
+          });
+        })
+        .catch(function (err) {
+          setUploadId(null);
+          setProgress(null);
+          console.log('Upload error!', err);
         });
-      } else {
-        // Video is stored in google cloud
-        Alert.alert('Video not found');
-      }
     });
   };
 
@@ -145,8 +124,7 @@ const App: () => React$Node = () => {
       <SafeAreaView testID="main_screen">
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
-          style={styles.scrollView}
-        >
+          style={styles.scrollView}>
           <Header />
           {global.HermesInternal == null ? null : (
             <View style={styles.engine}>
@@ -183,8 +161,7 @@ const App: () => React$Node = () => {
                     .catch(err => {
                       console.warn(err.message);
                     });
-                }}
-              >
+                }}>
                 <Text>10 Sec Delay Success</Text>
               </TouchableOpacity>
 
@@ -230,8 +207,7 @@ const App: () => React$Node = () => {
                     .catch(err => {
                       console.warn(err.message);
                     });
-                }}
-              >
+                }}>
                 <Text>5 Sec Delay Error</Text>
               </TouchableOpacity>
 
@@ -243,15 +219,15 @@ const App: () => React$Node = () => {
 
               <Button
                 title="Tap To Upload Multipart"
-                onPress={() =>
+                onPress={() => {
                   onPressUpload({
                     url: `http://${
                       Platform.OS === 'ios' ? 'localhost' : '10.0.2.2'
                     }:8080/upload_multipart`,
                     field: 'uploaded_media',
                     type: 'multipart',
-                  })
-                }
+                  });
+                }}
               />
 
               <View style={{height: 32}} />
