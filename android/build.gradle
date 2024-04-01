@@ -65,8 +65,8 @@ def _uploadServiceVersion = "4.9.2"
 
 dependencies {
 
-    implementation "androidx.work:work-runtime:$work_version"
-    implementation "androidx.work:work-runtime-ktx:$work_version"
+    implementation "androidx.work:work-runtime:$_workVersion"
+    implementation "androidx.work:work-runtime-ktx:$_workVersion"
 
     //noinspection GradleDynamicVersion
     implementation "androidx.core:core-ktx:1.12.0"
