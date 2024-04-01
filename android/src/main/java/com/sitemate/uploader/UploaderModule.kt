@@ -1,4 +1,4 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import android.app.Application
 import android.app.NotificationChannel
@@ -9,8 +9,8 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.vydia.RNUploader.work.UploadManager
-import com.vydia.RNUploader.work.UploadWorker
+import com.sitemate.uploader.work.UploadManager
+import com.sitemate.uploader.work.UploadWorker
 import com.facebook.react.BuildConfig
 import com.facebook.react.bridge.*
 import net.gotev.uploadservice.UploadService

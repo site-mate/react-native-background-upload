@@ -1,9 +1,9 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import android.content.Context
-import com.vydia.RNUploader.extensions.contentType
-import com.vydia.RNUploader.extensions.parameterName
-import com.vydia.RNUploader.extensions.remoteFileName
+import com.sitemate.uploader.extensions.contentType
+import com.sitemate.uploader.extensions.parameterName
+import com.sitemate.uploader.extensions.remoteFileName
 import net.gotev.uploadservice.UploadTask
 import net.gotev.uploadservice.data.UploadFile
 import net.gotev.uploadservice.protocols.multipart.MultipartUploadTask

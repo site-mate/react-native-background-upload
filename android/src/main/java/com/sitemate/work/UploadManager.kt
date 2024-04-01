@@ -1,8 +1,8 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import android.content.Context
-import com.vydia.RNUploader.extensions.UploadTaskCreationParameters
-import com.vydia.RNUploader.extensions.getUploadTask
+import com.sitemate.uploader.extensions.UploadTaskCreationParameters
+import com.sitemate.uploader.extensions.getUploadTask
 import net.gotev.uploadservice.UploadTask
 import net.gotev.uploadservice.data.UploadNotificationConfig
 import net.gotev.uploadservice.data.UploadTaskParameters

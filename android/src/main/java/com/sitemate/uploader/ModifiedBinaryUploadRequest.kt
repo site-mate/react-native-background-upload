@@ -1,4 +1,4 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import android.content.Context
 import net.gotev.uploadservice.UploadTask

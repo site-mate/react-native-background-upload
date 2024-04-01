@@ -1,4 +1,4 @@
-package com.appfolio.uploader;
+package com.sitemate.uploader;
 
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.JavaScriptModule;

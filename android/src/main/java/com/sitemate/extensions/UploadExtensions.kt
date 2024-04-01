@@ -1,4 +1,4 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import androidx.work.Constraints
 import androidx.work.Data

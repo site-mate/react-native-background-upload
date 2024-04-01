@@ -1,12 +1,12 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import android.content.Context
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import com.vydia.RNUploader.extensions.setData
-import com.vydia.RNUploader.extensions.shouldLimitNetwork
-import com.vydia.RNUploader.work.UploadManager
-import com.vydia.RNUploader.work.UploadWorker
+import com.sitemate.uploader.extensions.setData
+import com.sitemate.uploader.extensions.shouldLimitNetwork
+import com.sitemate.uploader.work.UploadManager
+import com.sitemate.uploader.work.UploadWorker
 import net.gotev.uploadservice.HttpUploadRequest
 import net.gotev.uploadservice.data.UploadTaskParameters
 import java.util.*

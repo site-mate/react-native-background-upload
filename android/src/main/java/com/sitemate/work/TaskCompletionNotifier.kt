@@ -1,4 +1,4 @@
-package com.vydia.RNUploader
+package com.sitemate.uploader
 
 import net.gotev.uploadservice.data.UploadInfo
 import net.gotev.uploadservice.data.UploadNotificationConfig
