@@ -1,4 +1,4 @@
-package com.sitemate.uploader
+package com.sitemate.work
 
 import android.content.Context
 import androidx.work.Worker

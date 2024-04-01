@@ -1,4 +1,4 @@
-package com.sitemate.uploader
+package com.sitemate.work
 
 import net.gotev.uploadservice.data.UploadInfo
 import net.gotev.uploadservice.data.UploadNotificationConfig

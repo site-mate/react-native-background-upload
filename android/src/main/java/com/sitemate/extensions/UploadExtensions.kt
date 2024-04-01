@@ -1,4 +1,4 @@
-package com.sitemate.uploader
+package com.sitemate.extensions
 
 import androidx.work.Constraints
 import androidx.work.Data

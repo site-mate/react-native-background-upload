@@ -1,4 +1,4 @@
-package com.sitemate.uploader
+package com.sitemate.extensions
 
 import android.content.Context
 import com.sitemate.work.TaskCompletionNotifier
