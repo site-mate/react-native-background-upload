@@ -69,9 +69,15 @@ const App = () => {
       includeExif: true,
       maxFiles: 1,
       writeTempFile: false, // note: this would be handy, but is iOS only :-(
+    }).catch(e => {
+      console.warn(e);
+      setIsImagePickerShowing(false);
     });
 
-    const finalPath = galleryMedia.path || galleryMedia.uri;
+    const finalPath = (galleryMedia.path || galleryMedia.uri).replace(
+      'file://',
+      '',
+    );
 
     console.log('media!', galleryMedia);
     console.log('media path', finalPath);
@@ -221,9 +227,7 @@ const App = () => {
                 title="Tap To Upload Multipart"
                 onPress={() => {
                   onPressUpload({
-                    url: `http://${
-                      Platform.OS === 'ios' ? 'localhost' : '10.0.2.2'
-                    }:8080/upload_multipart`,
+                    url: `http://192.168.31.9:8080/upload_multipart`,
                     field: 'uploaded_media',
                     type: 'multipart',
                   });
