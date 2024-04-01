@@ -7,6 +7,10 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import com.appfolio.work.UploadManager
+import com.appfolio.work.UploadWorker
 import com.facebook.react.BuildConfig
 import com.facebook.react.bridge.*
 import net.gotev.uploadservice.UploadService
@@ -37,7 +41,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
   Returns an object such as: {extension: "mp4", size: "3804316", exists: true, mimeType: "video/mp4", name: "20161116_074726.mp4"}
    */
   @ReactMethod
-  fun getFileInfo(path: String, promise: Promise) {
+  fun getFileInfo(path: String?, promise: Promise) {
     try {
       val params = Arguments.createMap()
       val fileInfo = File(path)
@@ -49,7 +53,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
         params.putString("size", fileInfo.length().toString()) //use string form of long because there is no putLong and converting to int results in a max size of 17.2 gb, which could happen.  Javascript will need to convert it to a number
         val extension = MimeTypeMap.getFileExtensionFromUrl(path)
         params.putString("extension", extension)
-        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase())
+        val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.toLowerCase())
         params.putString("mimeType", mimeType)
       }
       promise.resolve(params)
@@ -64,9 +68,9 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
     var followRedirects = true
     var followSslRedirects = true
     var retryOnConnectionFailure = true
-    var connectTimeout = 15
-    var writeTimeout = 30
-    var readTimeout = 30
+    var connectTimeout = 45
+    var writeTimeout = 90
+    var readTimeout = 90
     //TODO: make 'cache' customizable
     if (options.hasKey("followRedirects")) {
       if (options.getType("followRedirects") != ReadableType.Boolean) {

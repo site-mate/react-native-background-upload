@@ -1,8 +1,7 @@
 /**
  * Handles HTTP background file uploads from an iOS or Android device.
  */
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
-import type { EventSubscription } from 'react-native';
+import { Platform, NativeModules, DeviceEventEmitter } from 'react-native';
 
 export type UploadEvent =
   | 'progress'
@@ -32,21 +31,16 @@ export type StartUploadArgs = {
 };
 
 const NativeModule =
-  NativeModules.VydiaRNFileUploader || NativeModules.RNFileUploader; // iOS is VydiaRNFileUploader and Android is RNFileUploader
+  NativeModules.VydiaRNFileUploader || NativeModules.RNFileUploader; // iOS is VydiaRNFileUploader and Android is NativeModules
 const eventPrefix = 'RNFileUploader-';
 
-const eventEmitter = new NativeEventEmitter(NativeModule);
-
-// add event listeners so they always fire on the native side
-// no longer needed.
-// if (Platform.OS === 'ios') {
-//   const identity = () => {};
-//   eventEmitter.addListener(eventPrefix + 'progress', identity);
-//   eventEmitter.addListener(eventPrefix + 'error', identity);
-//   eventEmitter.addListener(eventPrefix + 'cancelled', identity);
-//   eventEmitter.addListener(eventPrefix + 'completed', identity);
-//   eventEmitter.addListener(eventPrefix + 'bgExpired', identity);
-// }
+// for IOS, register event listeners or else they don't fire on DeviceEventEmitter
+if (NativeModules.VydiaRNFileUploader) {
+  NativeModule.addListener(eventPrefix + 'progress');
+  NativeModule.addListener(eventPrefix + 'error');
+  NativeModule.addListener(eventPrefix + 'cancelled');
+  NativeModule.addListener(eventPrefix + 'completed');
+}
 
 /*
 Gets file information for the path specified.
@@ -122,8 +116,8 @@ export const addListener = (
   eventType: UploadEvent,
   uploadId: string,
   listener: Function,
-): EventSubscription => {
-  return eventEmitter.addListener(eventPrefix + eventType, data => {
+) => {
+  return DeviceEventEmitter.addListener(eventPrefix + eventType, data => {
     if (!uploadId || !data || !data.id || data.id === uploadId) {
       listener(data);
     }
@@ -166,6 +160,10 @@ export const endBackgroundTask = (id: number) => {
   }
 };
 
+export const getAllUploads = () => {
+  return NativeModule.getAllUploads();
+};
+
 export default {
   startUpload,
   cancelUpload,
@@ -175,4 +173,5 @@ export default {
   getRemainingBgTime,
   beginBackgroundTask,
   endBackgroundTask,
+  getAllUploads
 };
