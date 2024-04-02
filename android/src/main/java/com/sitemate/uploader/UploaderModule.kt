@@ -312,6 +312,51 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
     }
   }
 
+  /*
+   * Gets all file uploads with their state
+   */
+  @ReactMethod
+  fun getAllUploads(promise: Promise) {
+    val workManager: WorkManager = WorkManager.getInstance(reactContext)
+    val workInfos = workManager.getWorkInfosByTag(UploadWorker::class.java.name).get()
+    val uploads = Arguments.createArray()
+
+    for (info in workInfos) {
+      // Ignore 'SUCCEEDED' state from WorkManager since that only means that the uploads have started
+      if (info.state === WorkInfo.State.SUCCEEDED) {
+        continue
+      }
+
+      val upload = Arguments.createMap()
+      
+      val idTag = info.tags.toTypedArray().find { it.startsWith(UploadWorker::class.java.simpleName) }
+      upload.putString("id", idTag?.removePrefix("${UploadWorker::class.java.simpleName}-"))
+
+      when(info.state) {
+        WorkInfo.State.RUNNING ->
+          upload.putString("state", "running")
+        WorkInfo.State.CANCELLED, WorkInfo.State.FAILED ->
+          upload.putString("state", "cancelled")
+        WorkInfo.State.BLOCKED, WorkInfo.State.ENQUEUED ->
+          upload.putString("state", "pending")
+        else ->
+          continue
+      }
+
+      uploads.pushMap(upload)
+    }
+
+    val uploadTaskList = UploadManager.taskList
+    for (task in uploadTaskList) {
+      val upload = Arguments.createMap()
+      upload.putString("id", task)
+      upload.putString("state", "running")
+      uploads.pushMap(upload)
+    }
+
+    promise.resolve(uploads)
+  }
+
   // Customize the notification channel as you wish. This is only for a bare minimum example
   private fun createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= 26) {
