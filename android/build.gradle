@@ -4,9 +4,10 @@ buildscript {
     }
 
     ext {
-        ext.kotlinVersion = safeExtGet('kotlinVersion', '1.6.0')
-        buildToolsVersion = '29.0.2'
-        compileSdkVersion = 29
+        agpVersion = '7.4.0'
+        ext.kotlinVersion = safeExtGet('kotlinVersion', '1.9.22')
+        buildToolsVersion = '34.0.0'
+        compileSdkVersion = 34
         targetSdkVersion = 29
         minSdkVersion = 18
     }
@@ -17,7 +18,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.3'
+        classpath "com.android.tools.build:gradle:$agpVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
     }
 }
@@ -25,9 +26,9 @@ buildscript {
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
-def DEFAULT_COMPILE_SDK_VERSION = 28
-def DEFAULT_BUILD_TOOLS_VERSION = "28.0.3"
-def DEFAULT_TARGET_SDK_VERSION = 28
+def DEFAULT_COMPILE_SDK_VERSION = 31
+def DEFAULT_BUILD_TOOLS_VERSION = "30.0.2"
+def DEFAULT_TARGET_SDK_VERSION = 29
 
 def safeExtGet(prop, fallback) {
     rootProject.ext.has(prop) ? rootProject.ext.get(prop) : fallback
@@ -59,15 +60,26 @@ def _ext = ext
 
 def _kotlinVersion = _ext.has('detoxKotlinVersion') ? _ext.detoxKotlinVersion : '1.3.10'
 def _kotlinStdlib = _ext.has('detoxKotlinStdlib') ? _ext.detoxKotlinStdlib : 'kotlin-stdlib-jdk8'
+def _workVersion = "2.9.0"
+def _uploadServiceVersion = "4.9.2"
 
 dependencies {
-    implementation "androidx.core:core-ktx:1.0.1"
+
+    implementation "androidx.work:work-runtime:$_workVersion"
+    implementation "androidx.work:work-runtime-ktx:$_workVersion"
+
+    //noinspection GradleDynamicVersion
+    implementation "androidx.core:core-ktx:1.12.0"
 
     implementation 'com.facebook.react:react-native:+'
 
     implementation "org.jetbrains.kotlin:$_kotlinStdlib:$_kotlinVersion"
 
-    implementation 'net.gotev:uploadservice-okhttp:4.9.2'
+    //noinspection GradleDependency
+    implementation "net.gotev:uploadservice:$_uploadServiceVersion"
+    //noinspection GradleDependency
+    implementation "net.gotev:uploadservice-okhttp:$_uploadServiceVersion"
 
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
