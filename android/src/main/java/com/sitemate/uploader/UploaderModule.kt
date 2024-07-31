@@ -358,7 +358,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
   }
 
   // Customize the notification channel as you wish. This is only for a bare minimum example
-  public fun createNotificationChannel() {
+  private fun createNotificationChannel() {
     if (Build.VERSION.SDK_INT >= 26) {
       val channel = NotificationChannel(
               notificationChannelID,
