@@ -176,9 +176,7 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       notificationChannelID = notification.getString("notificationChannel")!!
     }
 
-   if (notificationManager.getNotificationChannel(notificationChannelId) == null) {
-    createNotificationChannel();
-   }
+    createNotificationChannel()
 
     initialize(application, notificationChannelID, BuildConfig.DEBUG)
 
