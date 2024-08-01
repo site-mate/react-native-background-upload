@@ -6,66 +6,39 @@
 
 #import "VydiaRNFileUploader.h"
 
-@implementation VydiaRNFileUploader{
-    unsigned long uploadId;
-    NSMutableDictionary *_responsesData;
-    NSURLSession *_urlSession;
-    void (^backgroundSessionCompletionHandler)(void);
-}
+@implementation VydiaRNFileUploader
 
 RCT_EXPORT_MODULE();
 
+@synthesize bridge = _bridge;
+static VydiaRNFileUploader* staticInstance = nil;
 static NSString *BACKGROUND_SESSION_ID = @"ReactNativeBackgroundUpload";
-static VydiaRNFileUploader *sharedInstance;
-
+NSMutableDictionary *_responsesData;
+NSURLSession *_urlSession = nil;
+void (^backgroundSessionCompletionHandler)(void) = nil;
+BOOL limitNetwork = NO;
 
 + (BOOL)requiresMainQueueSetup {
     return YES;
 }
 
 - (dispatch_queue_t)methodQueue
-{
-  return dispatch_get_main_queue();
-}
+ {
+   return dispatch_get_main_queue();
+ }
 
-- (id)initPrivate {
-    if (self = [super init]) {
-        uploadId = 0;
+-(id) init {
+    self = [super init];
+    if (self) {
+        staticInstance = self;
         _responsesData = [NSMutableDictionary dictionary];
-        _urlSession = nil;
-        backgroundSessionCompletionHandler = nil;
-        self.isObserving = NO;
     }
     return self;
 }
 
-// singleton access
-+ (VydiaRNFileUploader*)sharedInstance {
-    @synchronized(self) {
-        if (sharedInstance == nil)
-            sharedInstance = [[self alloc] initPrivate];
-    }
-    return sharedInstance;
-}
-
--(id) init {
-    return [VydiaRNFileUploader sharedInstance];
-}
-
 - (void)_sendEventWithName:(NSString *)eventName body:(id)body {
-
-    // add a delay to give time to event listeners to be set up
-    double delayInSeconds = 0.5;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        // do not check for self->isObserving for now
-        // as for some reason it is sometimes never set to YES after an app refresh
-        if (self.bridge != nil) {
-            [self sendEventWithName:eventName body:body];
-        }
-    });
-
+    if (staticInstance == nil) return;
+    [staticInstance sendEventWithName:eventName body:body];
 }
 
 - (NSArray<NSString *> *)supportedEvents {
@@ -73,39 +46,26 @@ static VydiaRNFileUploader *sharedInstance;
         @"RNFileUploader-progress",
         @"RNFileUploader-error",
         @"RNFileUploader-cancelled",
-        @"RNFileUploader-completed",
-        @"RNFileUploader-bgExpired"
+        @"RNFileUploader-completed"
     ];
 }
 
 - (void)startObserving {
-    self.isObserving = YES;
-
     // JS side is ready to receive events; create the background url session if necessary
     // iOS will then deliver the tasks completed while the app was dead (if any)
-//    double delayInSeconds = 0.5;
-//    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-//    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-//        NSLog(@"RNBU startObserving: recreate urlSession if necessary");
-//        [self urlSession];
-//    });
-
-    // why was the delay even needed?
-    //NSLog(@"RNBU startObserving: recreate urlSession if necessary");
-    [self urlSession];
+    NSString *appGroup = nil;
+    double delayInSeconds = 5;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        [self urlSession:appGroup];
+    });
 }
 
--(void)stopObserving {
-    self.isObserving = NO;
-}
-
-- (void)setBackgroundSessionCompletionHandler:(void (^)(void))handler {
-    @synchronized (self) {
-        backgroundSessionCompletionHandler = handler;
-        //NSLog(@"RNBU setBackgroundSessionCompletionHandler");
++ (void)setCompletionHandlerWithIdentifier: (NSString *)identifier completionHandler: (void (^)())completionHandler {
+    if ([BACKGROUND_SESSION_ID isEqualToString:identifier]) {
+        backgroundSessionCompletionHandler = completionHandler;
     }
 }
-
 
 /*
  Gets file information for the path specified.  Example valid path is: file:///var/mobile/Containers/Data/Application/3C8A0EFB-A316-45C0-A30A-761BF8CCF2F8/tmp/trim.A5F76017-14E9-4890-907E-36A045AF9436.MOV
@@ -114,7 +74,10 @@ static VydiaRNFileUploader *sharedInstance;
 RCT_EXPORT_METHOD(getFileInfo:(NSString *)path resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
-        NSURL *fileUri = [NSURL URLWithString: path];
+        // Escape non latin characters in filename
+        NSString *escapedPath = [path stringByAddingPercentEncodingWithAllowedCharacters: NSCharacterSet.URLQueryAllowedCharacterSet];
+       
+        NSURL *fileUri = [NSURL URLWithString:escapedPath];
         NSString *pathWithoutProtocol = [fileUri path];
         NSString *name = [fileUri lastPathComponent];
         NSString *extension = [name pathExtension];
@@ -143,19 +106,19 @@ RCT_EXPORT_METHOD(getFileInfo:(NSString *)path resolve:(RCTPromiseResolveBlock)r
 
 /*
  Borrowed from http://stackoverflow.com/questions/2439020/wheres-the-iphone-mime-type-database
- */
+*/
 - (NSString *)guessMIMETypeFromFileName: (NSString *)fileName {
     CFStringRef UTI = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, (__bridge CFStringRef)[fileName pathExtension], NULL);
     CFStringRef MIMEType = UTTypeCopyPreferredTagWithClass(UTI, kUTTagClassMIMEType);
-    CFRelease(UTI);
-   
+    
+    if (UTI) {
+        CFRelease(UTI);
+    }
+  
     if (!MIMEType) {
         return @"application/octet-stream";
     }
-    
-    NSString *dest = [NSString stringWithString:(__bridge NSString *)(MIMEType)];
-    CFRelease(MIMEType);
-    return dest;
+    return (__bridge NSString *)(MIMEType);
 }
 
 /*
@@ -201,32 +164,20 @@ RCT_EXPORT_METHOD(getFileInfo:(NSString *)path resolve:(RCTPromiseResolveBlock)r
  */
 RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
 {
-
     NSString *uploadUrl = options[@"url"];
-    __block NSString *fileURI = options[@"path"] ?: @"";
+    __block NSString *fileURI = options[@"path"];
     NSString *method = options[@"method"] ?: @"POST";
     NSString *uploadType = options[@"type"] ?: @"raw";
     NSString *fieldName = options[@"field"];
     NSString *customUploadId = options[@"customUploadId"];
+    NSString *appGroup = options[@"appGroup"];
     NSDictionary *headers = options[@"headers"];
     NSDictionary *parameters = options[@"parameters"];
-
-
-    NSString *thisUploadId = customUploadId;
-
-    if(!thisUploadId){
-        @synchronized(self)
-        {
-            thisUploadId = [NSString stringWithFormat:@"%lu", uploadId++];
-
-        }
-    }
-
 
     @try {
         NSURL *requestUrl = [NSURL URLWithString: uploadUrl];
         if (requestUrl == nil) {
-            @throw @"Request URL cannot be nil";
+            return reject(@"RN Uploader", @"URL not compliant with RFC 2396", nil);
         }
 
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:requestUrl];
@@ -258,34 +209,34 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
         }
 
+        NSString *uploadId = customUploadId ? customUploadId : [[NSUUID UUID] UUIDString];
         NSURLSessionUploadTask *uploadTask;
 
         if ([uploadType isEqualToString:@"multipart"]) {
             NSString *uuidStr = [[NSUUID UUID] UUIDString];
             [request setValue:[NSString stringWithFormat:@"multipart/form-data; boundary=%@", uuidStr] forHTTPHeaderField:@"Content-Type"];
 
-            NSData *httpBody = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
+            NSData *multipartData = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
+            
+            NSURL *multipartDataFileUrl = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/%@", [self getTmpDirectory], uploadId]];
+            [multipartData writeToURL:multipartDataFileUrl atomically:YES];
 
-            [request setHTTPBody: httpBody];
-            uploadTask = [[self urlSession] uploadTaskWithStreamedRequest:request];
-
-
+            uploadTask = [[self urlSession: appGroup] uploadTaskWithRequest:request fromFile:multipartDataFileUrl];
         } else {
             if (parameters.count > 0) {
                 reject(@"RN Uploader", @"Parameters supported only in multipart type", nil);
                 return;
             }
 
-            uploadTask = [[self urlSession] uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
+            uploadTask = [[self urlSession: appGroup] uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
         }
 
-        uploadTask.taskDescription = thisUploadId;
-        //NSLog(@"RNBU will start upload %@", uploadTask.taskDescription);
+        uploadTask.taskDescription = uploadId;
+
         [uploadTask resume];
         resolve(uploadTask.taskDescription);
     }
     @catch (NSException *exception) {
-        //NSLog(@"RNBU startUpload error: %@", exception);
         reject(@"RN Uploader", exception.name, nil);
     }
 }
@@ -307,102 +258,72 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
     resolve([NSNumber numberWithBool:YES]);
 }
 
-
-/*
- * Returns remaining allowed background time
- */
-RCT_REMAP_METHOD(getRemainingBgTime, getRemainingBgTimeResolver:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject) {
-
-    dispatch_sync(dispatch_get_main_queue(), ^(void){
-        double time = [[UIApplication sharedApplication] backgroundTimeRemaining];
-        //NSLog(@"Background xx time Remaining: %f", time);
-        resolve([NSNumber numberWithDouble:time]);
-    });
-}
-
-// Let the OS it can suspend, must be called after enqueing all requests
 RCT_EXPORT_METHOD(canSuspendIfBackground) {
-    //NSLog(@"RNBU canSuspendIfBackground");
+    if (backgroundSessionCompletionHandler) {
+        backgroundSessionCompletionHandler();
+        backgroundSessionCompletionHandler = nil;
+    }
+}
 
-    // run with delay to give JS some time
-    double delayInSeconds = 0.2;
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-        @synchronized (self) {
-            if (self->backgroundSessionCompletionHandler) {
-                self->backgroundSessionCompletionHandler();
-                //NSLog(@"RNBU did call backgroundSessionCompletionHandler (canSuspendIfBackground)");
-                self->backgroundSessionCompletionHandler = nil;
+RCT_EXPORT_METHOD(shouldLimitNetwork: (BOOL) limit) {
+    limitNetwork = limit;
+}
+
+RCT_EXPORT_METHOD(getAllUploads:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
+{
+    NSString *appGroup = nil;
+    [[self urlSession: appGroup] getTasksWithCompletionHandler:^(NSArray *dataTasks, NSArray *uploadTasks, NSArray *downloadTasks) {
+        NSMutableArray *uploads = [NSMutableArray new];
+        for (NSURLSessionUploadTask *uploadTask in uploadTasks) {
+            NSString *state;
+            switch (uploadTask.state) {
+            case NSURLSessionTaskStateRunning:
+                state = @"running";
+                break;
+            case NSURLSessionTaskStateSuspended:
+                state = @"pending";
+                break;
+            case NSURLSessionTaskStateCanceling:
+                state = @"cancelled";
+                break;
+            case NSURLSessionTaskStateCompleted:
+                state = @"completed";
+                break;
             }
+            
+            NSDictionary *upload = @{
+                @"id" : uploadTask.taskDescription,
+                @"state" : state
+            };
+            [uploads addObject:upload];
         }
-    });
-}
-
-// requests / releases background task time to the OS
-// returns task id
-RCT_REMAP_METHOD(beginBackgroundTask, beginBackgroundTaskResolver:(RCTPromiseResolveBlock)resolve
-                 rejecter:(RCTPromiseRejectBlock)reject){
-
-    __block NSUInteger taskId = UIBackgroundTaskInvalid;
-
-    taskId = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-        //NSLog(@"RNBU beginBackgroundTaskWithExpirationHandler id: %ul", taskId);
-
-        // do not use the other send event cause it has a delay
-        // always send expire event, even if task id is invalid
-        if (self.isObserving && self.bridge != nil) {
-            [self sendEventWithName:@"RNFileUploader-bgExpired" body:@{@"id": [NSNumber numberWithUnsignedLong:taskId]}];
-        }
-
-        if (taskId != UIBackgroundTaskInvalid){
-
-            //double time = [[UIApplication sharedApplication] backgroundTimeRemaining];
-            //NSLog(@"Background xx time Remaining: %f", time);
-
-            // dispatch async so we give time to JS to finish
-            // we have about 3-4 seconds
-            double delayInSeconds = 0.7;
-            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
-
-            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-                [[UIApplication sharedApplication] endBackgroundTask: taskId];
-            });
-
-        }
+        resolve(uploads);
     }];
-
-    //NSLog(@"RNBU beginBackgroundTask id: %ul", taskId);
-    resolve([NSNumber numberWithUnsignedLong:taskId]);
-
 }
-
-
-RCT_EXPORT_METHOD(endBackgroundTask: (NSUInteger)taskId resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject){
-
-    @try{
-        if(taskId != UIBackgroundTaskInvalid){
-            [[UIApplication sharedApplication] endBackgroundTask: taskId];
-        }
-
-        //NSLog(@"RNBU endBackgroundTask id: %ul", taskId);
-        resolve([NSNumber numberWithBool:YES]);
-    }
-    @catch (NSException *exception) {
-        //NSLog(@"RNBU endBackgroundTask error: %@", exception);
-        reject(@"RN Uploader", exception.name, nil);
-    }
-}
-
-
 
 - (NSData *)createBodyWithBoundary:(NSString *)boundary
-                         path:(NSString *)path
-                         parameters:(NSDictionary *)parameters
-                         fieldName:(NSString *)fieldName {
+            path:(NSString *)path
+            parameters:(NSDictionary *)parameters
+            fieldName:(NSString *)fieldName {
 
     NSMutableData *httpBody = [NSMutableData data];
 
+    // Escape non latin characters in filename
+    NSString *escapedPath = [path stringByAddingPercentEncodingWithAllowedCharacters: NSCharacterSet.URLQueryAllowedCharacterSet];
 
+    // resolve path
+    NSURL *fileUri = [NSURL URLWithString: escapedPath];
+    
+    NSError* error = nil;
+    NSData *data = [NSData dataWithContentsOfURL:fileUri options:NSDataReadingMappedAlways error: &error];
+
+    if (data == nil) {
+        NSLog(@"Failed to read file %@", error);
+    }
+
+    NSString *filename  = [path lastPathComponent];
+    NSString *mimetype  = [self guessMIMETypeFromFileName:path];
 
     [parameters enumerateKeysAndObjectsUsingBlock:^(NSString *parameterKey, NSString *parameterValue, BOOL *stop) {
         [httpBody appendData:[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -410,46 +331,43 @@ RCT_EXPORT_METHOD(endBackgroundTask: (NSUInteger)taskId resolve:(RCTPromiseResol
         [httpBody appendData:[[NSString stringWithFormat:@"%@\r\n", parameterValue] dataUsingEncoding:NSUTF8StringEncoding]];
     }];
 
-
-    // resolve path
-    if ([path length] > 0){
-        NSURL *fileUri = [NSURL URLWithString: path];
-        NSString *pathWithoutProtocol = [fileUri path];
-
-        NSData *data = [[NSFileManager defaultManager] contentsAtPath:pathWithoutProtocol];
-        NSString *filename  = [path lastPathComponent];
-        NSString *mimetype  = [self guessMIMETypeFromFileName:path];
-
-        [httpBody appendData:[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
-        [httpBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n", fieldName, filename] dataUsingEncoding:NSUTF8StringEncoding]];
-        [httpBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", mimetype] dataUsingEncoding:NSUTF8StringEncoding]];
-        [httpBody appendData:data];
-        [httpBody appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
-
-    }
+    [httpBody appendData:[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+    [httpBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"%@\"\r\n", fieldName, filename] dataUsingEncoding:NSUTF8StringEncoding]];
+    [httpBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", mimetype] dataUsingEncoding:NSUTF8StringEncoding]];
+    [httpBody appendData:data];
+    [httpBody appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
 
     [httpBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
 
     return httpBody;
 }
 
-- (NSURLSession *)urlSession {
-    @synchronized (self) {
-        if (_urlSession == nil) {
-            NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
-
-            // UPDATE: Enforce a timeout here because we will otherwise
-            // not get errors if the server times out
-            sessionConfiguration.timeoutIntervalForResource = 5 * 60;
-
-            _urlSession = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:self delegateQueue:nil];
+- (NSURLSession *)urlSession: (NSString *) groupId {
+    if (_urlSession == nil) {
+        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
+        if (groupId != nil && ![groupId isEqualToString:@""]) {
+            sessionConfiguration.sharedContainerIdentifier = groupId;
         }
+        if (limitNetwork) {
+            sessionConfiguration.allowsCellularAccess = NO;
+        }
+        _urlSession = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:self delegateQueue:nil];
     }
 
     return _urlSession;
 }
 
-#pragma NSURLSessionTaskDelegate
+- (NSString *)getTmpDirectory {
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSString *namespace = @"react-native-upload";
+    NSString *tmpPath = [NSTemporaryDirectory() stringByAppendingString:namespace];
+    
+    [manager createDirectoryAtPath: tmpPath withIntermediateDirectories:YES attributes:nil error:nil];
+    
+    return tmpPath;
+}
+
+#pragma mark - NSURLSessionTaskDelegate
 
 - (void)URLSession:(NSURLSession *)session
               task:(NSURLSessionTask *)task
@@ -461,7 +379,7 @@ didCompleteWithError:(NSError *)error {
     {
         [data setObject:[NSNumber numberWithInteger:response.statusCode] forKey:@"responseCode"];
     }
-    
+
     // add headers
     NSMutableDictionary *headers = [[NSMutableDictionary alloc] init];
     NSDictionary *respHeaders = response.allHeaderFields;
@@ -470,7 +388,7 @@ didCompleteWithError:(NSError *)error {
         headers[[key lowercaseString]] = respHeaders[key];
     }
     [data setObject:headers forKey:@"responseHeaders"];
-    
+
     // Add data that was collected earlier by the didReceiveData method
     NSMutableData *responseData = _responsesData[@(task.taskIdentifier)];
     if (responseData) {
@@ -481,20 +399,22 @@ didCompleteWithError:(NSError *)error {
         [data setObject:[NSNull null] forKey:@"responseBody"];
     }
 
-
-    if (error == nil) {
+    if (error == nil)
+    {
         [self _sendEventWithName:@"RNFileUploader-completed" body:data];
-        //NSLog(@"RNBU did complete upload %@", task.taskDescription);
-    } else {
+    }
+    else
+    {
         [data setObject:error.localizedDescription forKey:@"error"];
         if (error.code == NSURLErrorCancelled) {
             [self _sendEventWithName:@"RNFileUploader-cancelled" body:data];
-            //NSLog(@"RNBU did cancel upload %@", task.taskDescription);
         } else {
             [self _sendEventWithName:@"RNFileUploader-error" body:data];
-            //NSLog(@"RNBU did error upload %@", task.taskDescription);
         }
     }
+
+    NSURL *multipartDataFileUrl = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/%@", [self getTmpDirectory], task.taskDescription]];
+    [[NSFileManager defaultManager] removeItemAtURL:multipartDataFileUrl error:nil];
 }
 
 - (void)URLSession:(NSURLSession *)session
@@ -503,15 +423,18 @@ didCompleteWithError:(NSError *)error {
     totalBytesSent:(int64_t)totalBytesSent
 totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend {
     float progress = -1;
-    if (totalBytesExpectedToSend > 0) { // see documentation.  For unknown size it's -1 (NSURLSessionTransferSizeUnknown)
+    if (totalBytesExpectedToSend > 0) //see documentation.  For unknown size it's -1 (NSURLSessionTransferSizeUnknown)
+    {
         progress = 100.0 * (float)totalBytesSent / (float)totalBytesExpectedToSend;
     }
     [self _sendEventWithName:@"RNFileUploader-progress" body:@{ @"id": task.taskDescription, @"progress": [NSNumber numberWithFloat:progress] }];
 }
 
 - (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
-    if (!data.length) return;
-    // Hold returned data so it can be picked up by the didCompleteWithError method later
+    if (!data.length) {
+        return;
+    }
+    //Hold returned data so it can be picked up by the didCompleteWithError method later
     NSMutableData *responseData = _responsesData[@(dataTask.taskIdentifier)];
     if (!responseData) {
         responseData = [NSMutableData dataWithData:data];
@@ -521,25 +444,23 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend {
     }
 }
 
+#pragma mark - NSURLSessionDelegate
 
-// this will allow the app *technically* to wake up, run some code
-// and then sleep. We will set a very short timeout (less than 5 seconds)
-// to call the completion handler if it wasn't called already
 - (void)URLSessionDidFinishEventsForBackgroundURLSession:(NSURLSession *)session {
-    //NSLog(@"RNBU URLSessionDidFinishEventsForBackgroundURLSession");
-
     if (backgroundSessionCompletionHandler) {
-        double delayInSeconds = 4;
+        NSLog(@"RNBU Did Finish Events For Background URLSession (has backgroundSessionCompletionHandler)");
+        // This long delay is set as a security if the JS side does not call :canSuspendIfBackground: promptly
+        double delayInSeconds = 45.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);
         dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
-            @synchronized (self) {
-                if (self->backgroundSessionCompletionHandler) {
-                    self->backgroundSessionCompletionHandler();
-                    //NSLog(@"RNBU did call backgroundSessionCompletionHandler (URLSessionDidFinishEventsForBackgroundURLSession)");
-                    self->backgroundSessionCompletionHandler = nil;
-                }
+            if (backgroundSessionCompletionHandler) {
+                backgroundSessionCompletionHandler();
+                NSLog(@"RNBU did call backgroundSessionCompletionHandler (timeout)");
+                backgroundSessionCompletionHandler = nil;
             }
         });
+    } else {
+        NSLog(@"RNBU Did Finish Events For Background URLSession (no backgroundSessionCompletionHandler)");
     }
 }
 

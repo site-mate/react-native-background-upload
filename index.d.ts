@@ -114,7 +114,7 @@ declare module "react-native-background-upload" {
 
     export default class Upload {
         static startUpload(options: UploadOptions | MultipartUploadOptions): Promise<uploadId>
-        static addListener(event: 'progress', uploadId: uploadId | null, callback: (data: ProgressData ) => void): EventSubscription
+        static addListener(event: 'progress', uploadId: uploadId | null, callback: (data: ProgressData) => void): EventSubscription
         static addListener(event: 'error', uploadId: uploadId | null, callback: (data: ErrorData) => void): EventSubscription
         static addListener(event: 'completed', uploadId: uploadId | null, callback: (data: CompletedData) => void): EventSubscription
         static addListener(event: 'cancelled', uploadId: uploadId | null, callback: (data: EventData) => void): EventSubscription
@@ -125,6 +125,8 @@ declare module "react-native-background-upload" {
         static getRemainingBgTime: () => Promise<number>;
         static beginBackgroundTask: () => Promise<number>;
         static endBackgroundTask: (id: number) => void;
+        static shouldLimitNetwork(limit: boolean): void;
+        static getAllUploads(): Promise<SystemUploadStates>;
     }
 
 }
