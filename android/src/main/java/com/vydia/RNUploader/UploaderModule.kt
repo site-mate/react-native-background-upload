@@ -205,6 +205,9 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
       request.setMethod(method!!)
               .setMaxRetries(maxRetries)
       if (notification.getBoolean("enabled")) {
+        // [SMM-1836] Check if hideError flag is set
+        val hideError = notification.hasKey("hideError") && notification.getBoolean("hideError")
+
         // for placeholder guide, reference this example:
         // https://github.com/gotev/android-upload-service/blob/f2254d47b33a3891e33c600f39fef7abfa9ffdf9/uploadservice/src/main/java/net/gotev/uploadservice/UploadServiceConfig.kt#L131-L157
         val notificationConfig = UploadNotificationConfig(
@@ -219,10 +222,21 @@ class UploaderModule(val reactContext: ReactApplicationContext) : ReactContextBa
                         message = if (notification.hasKey("onCompleteMessage")) notification.getString("onCompleteMessage")!! else "Upload completed successfully in ${Placeholder.ElapsedTime}",
                         autoClear = notification.hasKey("autoClear") && notification.getBoolean("autoClear")
                 ),
-                error = UploadNotificationStatusConfig(
-                        title = if (notification.hasKey("onErrorTitle")) notification.getString("onErrorTitle")!! else "Upload failed",
-                        message = if (notification.hasKey("onErrorMessage")) notification.getString("onErrorMessage")!! else "Error during upload"
-                ),
+                // [SMM-1836] Conditionally hide error notifications based on hideError flag
+                error = if (hideError) {
+                        // Hide error notifications using empty strings
+                        UploadNotificationStatusConfig(
+                                title = "",
+                                message = "",
+                                autoClear = true
+                        )
+                } else {
+                        // Show normal error notifications
+                        UploadNotificationStatusConfig(
+                                title = if (notification.hasKey("onErrorTitle")) notification.getString("onErrorTitle")!! else "Upload failed",
+                                message = if (notification.hasKey("onErrorMessage")) notification.getString("onErrorMessage")!! else "Error during upload"
+                        )
+                },
                 cancelled = UploadNotificationStatusConfig(
                         title = if (notification.hasKey("onCancelledTitle")) notification.getString("onCancelledTitle")!! else "Upload cancelled",
                         message = if (notification.hasKey("onCancelledMessage")) notification.getString("onCancelledMessage")!! else ""
