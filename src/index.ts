@@ -13,6 +13,8 @@ export type UploadEvent =
 
 export type NotificationArgs = {
   enabled: boolean;
+  // [SMM-1836] Hide error notifications while keeping progress/success visible
+  hideError?: boolean;
 };
 
 export type StartUploadArgs = {

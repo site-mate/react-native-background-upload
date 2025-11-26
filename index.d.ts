@@ -34,6 +34,10 @@ declare module "react-native-background-upload" {
          */
         enabled: boolean
         /**
+         * [SMM-1836] Hide error notifications while keeping progress/success visible. Uses empty strings to effectively hide error notifications on Android 8.0+. { hideError: true }
+         */
+        hideError?: boolean
+        /**
          * Autoclear notification on complete  { autoclear: true }
          */
         autoClear: boolean
