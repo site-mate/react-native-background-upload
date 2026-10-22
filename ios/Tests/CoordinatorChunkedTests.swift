@@ -371,4 +371,31 @@ final class CoordinatorChunkedTests: XCTestCase {
     let error = try XCTUnwrap(h.sink.settled.last?["error"] as? [String: Any])
     XCTAssertEqual(error["errorKind"] as? String, "file")
   }
+
+  func testQueueAllPartsCreatesEveryPartTaskAtEnqueue() throws {
+    _ = try h.enqueue(h.chunkedRaw(id: "cap", size: 50, parts: 5, extra: ["ios": ["queueAllParts": true]])).get()
+    XCTAssertEqual(h.transport.live.count, 5, "every part reaches the session at enqueue")
+    XCTAssertEqual(h.store.load("cap")?.queueAllParts, true, "persisted with the entry")
+    h.complete(try XCTUnwrap(partTask(0)))
+    XCTAssertEqual(h.transport.live.count, 4, "nothing left to add")
+  }
+
+  func testQueueAllPartsFalseKeepsTheWindowOfThree() throws {
+    _ = try h.enqueue(h.chunkedRaw(id: "cap", size: 50, parts: 5, extra: ["ios": ["queueAllParts": false]])).get()
+    XCTAssertEqual(h.transport.live.count, 3)
+  }
+
+  func testQueueAllPartsSurvivesARelaunch() throws {
+    _ = try h.enqueue(h.chunkedRaw(id: "cap", size: 50, parts: 5, extra: ["ios": ["queueAllParts": true]])).get()
+    let survivors = h.transport.live.map {
+      FakeTask(key: $0.key, description: $0.taskDescription, request: $0.request, beginAt: $0.beginAt)
+    }
+    // The daemon lost the tasks of parts 0 and 1 while the app was dead.
+    let fresh = Harness(root: h.root)
+    fresh.relaunch(daemonTasks: Array(survivors.dropFirst(2)))
+    fresh.boot()
+    fresh.advance(Double(QueueCoordinator.graceMs))
+    let recreated = fresh.transport.created.compactMap { ChunkedEngine.parsePartDescription($0.taskDescription)?.part }
+    XCTAssertEqual(recreated.sorted(), [0, 1], "past a window of 3, every pending part gets its task again")
+  }
 }
