@@ -1,4 +1,4 @@
-## Unreleased
+## 10.1.0
 
 Added `ios.queueAllParts` to the request descriptor. With `parts`, it creates
 every part task at `mutate()` instead of 3 at a time. iOS starts a task
