@@ -60,6 +60,11 @@ final class AppActivity {
 /// reconciliation.
 final class QueueCoordinator {
   static let queueLabel = "ai.openspace.rnbgupload.queue"
+  /// How long after the app becomes active the background tasks are
+  /// replaced. After a suspension, the daemon's progress and completions
+  /// for the tasks reach this process after didBecomeActive. Waiting lets
+  /// them land, so a task that already sent its body is not seen as unstarted.
+  static let replaceDelayMs = 2_000
 
   let queue: DispatchQueue
   let store: QueueStore
@@ -84,6 +89,8 @@ final class QueueCoordinator {
   /// Every task this process created or adopted, by TaskMap key.
   var liveTasks: [String: (id: String, task: UploadTask)] = [:]
   var expiryTokens: [String: UUID] = [:]
+  /// Bumped by scheduleReplace: only the latest scheduled replace runs.
+  var replaceGeneration = 0
   /// Open grace waits (a completion that may still replay), by name. While
   /// any is open, `afterGrace` holds the background completion handler
   /// release.
@@ -319,10 +326,24 @@ final class QueueCoordinator {
   }
 
   /// The app became active. Tasks created from now on are foreground tasks,
-  /// and the background tasks that have not started are replaced.
+  /// and the background tasks that have not started are replaced after
+  /// replaceDelayMs.
   func appBecameActive() {
     activity.isActive = true
-    queue.async { self.replaceBackgroundTasks() }
+    queue.async { self.scheduleReplace() }
+  }
+
+  /// Runs replaceBackgroundTasks after replaceDelayMs, while the app is
+  /// active. A later call supersedes an earlier one, so a quick trip to the
+  /// background and back still waits the full delay after the return.
+  func scheduleReplace() {
+    guard activity.isActive else { return }
+    replaceGeneration += 1
+    let generation = replaceGeneration
+    schedule(Self.replaceDelayMs) { [weak self] in
+      guard let self, generation == self.replaceGeneration else { return }
+      self.replaceBackgroundTasks()
+    }
   }
 
   /// The app is about to leave the foreground. Tasks created from now on are
@@ -332,27 +353,37 @@ final class QueueCoordinator {
   }
 
   /// Replaces every live task that was created while the app was not active
-  /// and has not sent a body byte. Apple's isDiscretionary docs: for a
-  /// transfer started in the background, the system assumes true and ignores
-  /// the value set. So such a task can wait for the system, for example
-  /// until the device charges. The replacement is created now, while the
-  /// app is active, and keeps what is left of a backoff. Tasks from builds
-  /// without the tag count as background tasks, so the first activation
-  /// after an upgrade replaces them too. Runs when the app becomes active,
-  /// and at the end of reconcile while it is.
+  /// and has neither sent a body byte nor had a response. Apple's
+  /// isDiscretionary docs: for a transfer started in the background, the
+  /// system assumes true and ignores the value set. So such a task can wait
+  /// for the system, for example until the device charges. The replacement
+  /// is created now, while the app is active, and keeps what is left of a
+  /// backoff. Tasks from builds without the tag count as background tasks,
+  /// so the first activation after an upgrade replaces them too. Runs
+  /// replaceDelayMs after the app becomes active, and after reconcile while
+  /// it is.
+  ///
+  /// The checks can still miss a body the daemon sent but has not reported.
+  /// Then the request is sent twice. Each copy carries the same X-Request-Id
+  /// for a simple request. Either copy that lands completes the entry.
   func replaceBackgroundTasks() {
     guard ready, activity.isActive else { return }
+    // Parts are replaced per entry, so each entry is saved once.
+    var parts: [String: [ChunkedCoordinator.Replaced]] = [:]
     for (key, owner) in liveTasks {
       let meta = taskMap.meta(forKey: key)
       guard meta?.foreground != true, meta?.purpose != .superseded, owner.task.isLive,
-            owner.task.bytesSent == 0,
+            owner.task.bytesSent == 0, !owner.task.hasResponse,
             let resolved = TaskOwner.resolve(description: owner.task.taskDescription, meta: meta) else { continue }
       switch resolved {
       case .part(let id, let part, let incarnation):
-        chunked.replace(id, part: part, incarnation: incarnation, key: key)
+        parts[id, default: []].append(.init(part: part, incarnation: incarnation, key: key))
       case .request(let id, let generation, let attempt):
         replaceRequestTask(id, generation: generation, attempt: attempt, key: key)
       }
+    }
+    for (id, replaced) in parts {
+      chunked.replace(id, replaced.sorted { $0.part < $1.part })
     }
   }
 
@@ -438,17 +469,24 @@ final class QueueCoordinator {
 
   /// Records why, then cancels every task this process holds for `id`.
   func cancelTasks(_ id: String, purpose: TaskMap.Purpose) {
-    for (key, owner) in liveTasks where owner.id == id {
-      cancelTask(key, purpose: purpose)
-    }
+    cancelTasks(keys: liveTasks.filter { $0.value.id == id }.map { $0.key }, purpose: purpose)
   }
 
   /// One task, by TaskMap key.
   func cancelTask(_ key: String, purpose: TaskMap.Purpose) {
-    guard let owner = liveTasks[key] else { return }
-    taskMap.setPurpose(purpose, forKey: key, id: owner.id)
-    owner.task.cancel()
-    liveTasks[key] = nil
+    cancelTasks(keys: [key], purpose: purpose)
+  }
+
+  /// Records why for every task in one TaskMap write, then cancels them.
+  /// Keys this process does not hold are skipped.
+  func cancelTasks(keys: [String], purpose: TaskMap.Purpose) {
+    let held = keys.compactMap { key in liveTasks[key].map { (key: key, owner: $0) } }
+    guard !held.isEmpty else { return }
+    taskMap.setPurpose(purpose, for: held.map { (key: $0.key, id: $0.owner.id) })
+    for (key, owner) in held {
+      owner.task.cancel()
+      liveTasks[key] = nil
+    }
   }
 
   func emitProgress(_ id: String, sent: Int64, total: Int64) {

@@ -1,3 +1,17 @@
+## Unreleased
+
+iOS waits two seconds after the app becomes active before replacing
+background-created tasks, and no longer replaces a task that has had a
+response, so the daemon's progress and completions from the suspension land
+first. See "Not at the system's discretion" in the README for the limits.
+
+A replaced simple request whose body landed anyway now completes its entry,
+even when its replacement failed and the entry moved to a later attempt.
+Before, the late success was dropped and the request was sent again.
+
+A chunked upload saves its entry and the task map once per batch of part
+tasks instead of once per part.
+
 ## 11.0.0
 
 Breaking: removed `ios.queueAllParts` from the request descriptor. A chunked
