@@ -1,4 +1,4 @@
-## Unreleased
+## 11.0.1
 
 iOS waits two seconds after the app becomes active before replacing
 background-created tasks, and no longer replaces a task that has had a
