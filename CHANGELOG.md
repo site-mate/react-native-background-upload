@@ -1,4 +1,4 @@
-## Unreleased
+## 11.0.0
 
 Breaking: removed `ios.queueAllParts` from the request descriptor. A chunked
 upload now always creates every part task at `mutate()`, and `mutate()` with
